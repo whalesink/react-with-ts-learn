@@ -1,0 +1,10 @@
+.header-logo {
+	/* float: left; */
+	height: 45px;
+	/* margin-top: 15px; */
+}
+
+.header-menu {
+	height: 100%;
+    border-bottom: none;
+}
