@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useContext } from "react";
 import useMousePos from "../hooks/useMousePos";
+import { ThemeContext } from "../App";
 
 // React.FunctionComponent是一个描述ReactDOM类型的接口, 别名是 React.FC
 // eslint-disable-next-line
@@ -78,7 +79,7 @@ const LikeButton3: React.FC = () => {
 /**
  * 无需清除的effect
  */
-const LikeButton: React.FC = () => {
+const LikeButton4: React.FC = () => {
 	const [like, setLike] = useState(0);
 	const position = useMousePos();
 	// 默认情况下，useEffect在组件第一次渲染之后和每次更新之后都会执行
@@ -89,7 +90,9 @@ const LikeButton: React.FC = () => {
 
 	return (
 		<React.Fragment>
-			<h2>X: {position.x}, Y：{position.y}</h2>
+			<h2>
+				X: {position.x}, Y：{position.y}
+			</h2>
 			<button
 				onClick={() => {
 					setLike(like + 1);
@@ -97,6 +100,152 @@ const LikeButton: React.FC = () => {
 			>
 				{like}赞👍
 			</button>
+		</React.Fragment>
+	);
+};
+
+/**
+ * useRef - state遇到的难题
+ */
+const LikeButton5: React.FC = () => {
+	const [like, setLike] = useState(0);
+	const position = useMousePos();
+	useEffect(() => {
+		document.title = `一共获得了 ${like} 个赞👍`;
+	});
+
+	// 当state中的值经常变化时，每次使用的state其状态都不同；
+	// 如该例中的like值，用户点击一次就会改变一次，而后组件重新渲染一次；
+	// 验证：点击任意次 赞 后，紧接着点击 Alert，然后紧接着继续点击任意次 赞；alert的值是旧值而不是最新值；
+	// 显然，like值存储在一个闭包中
+
+	// 结论是，在任意一次渲染中，state与props是始终不变的；使用到它们的任何值也是独立的。（下面的handleAlertClick就是如此）
+	// 在下一次渲染中，会替换为全新的state和props；
+	// 带来的问题是，如何在数次的渲染中产生联系？
+	function handleAlertClick() {
+		setTimeout(() => {
+			alert("you click on " + like);
+		}, 2000);
+	}
+
+	return (
+		<React.Fragment>
+			<h2>
+				X: {position.x}, Y：{position.y}
+			</h2>
+			<button
+				onClick={() => {
+					setLike(like + 1);
+				}}
+			>
+				{like}赞👍
+			</button>
+			<button onClick={handleAlertClick}>Alert</button>
+		</React.Fragment>
+	);
+};
+
+// useRef
+const LikeButton6: React.FC = () => {
+	const [like, setLike] = useState(0);
+	const position = useMousePos();
+
+	// useRef返回的 ref 对象在组件的整个生命周期内保持不变，但其current值需要手动维护
+	// 这里和like初始化为同一个值，其current保持和like的同步变化
+	const likeRef = useRef(0);
+
+	useEffect(() => {
+		document.title = `一共获得了 ${like} 个赞👍`;
+	});
+
+	// 用一种更加明显的方式表现函数组件的update生命周期（像class组件那样）
+	const didMountRef = useRef(false);
+	useEffect(() => {
+		if (didMountRef.current) {
+			console.log("this is updated");
+		} else {
+			didMountRef.current = true;
+		}
+	});
+
+	function handleAlertClick() {
+		setTimeout(() => {
+			// 此例可以看出函数组件的缺点：它弱化了生命周期的概念
+			// 这里拿到的值就是最新的了
+			alert("you click on " + like + " crt: " + likeRef.current);
+		}, 2000);
+	}
+
+	return (
+		<React.Fragment>
+			<h2>
+				X: {position.x}, Y：{position.y}
+			</h2>
+			<button
+				onClick={() => {
+					setLike(like + 1);
+					// current值保持和like的同步变化
+					likeRef.current++;
+				}}
+			>
+				{like}赞👍
+			</button>
+			<button onClick={handleAlertClick}>Alert</button>
+		</React.Fragment>
+	);
+};
+
+// 使用useRef访问DOM节点
+const LikeButton: React.FC = () => {
+	const [like, setLike] = useState(0);
+	const likeRef = useRef(0);
+	const theme = useContext(ThemeContext);
+	// console.log(theme);
+	const style = { ...theme };
+	console.log(style);
+
+	useEffect(() => {
+		document.title = `一共获得了 ${like} 个赞👍`;
+	});
+
+	// 需要获得的是inputElement，故指定泛型
+	const domRef = useRef<HTMLInputElement>(null);
+	useEffect(() => {
+		if (domRef && domRef.current) {
+			// 每次组件更新都会聚焦input
+			domRef.current.focus();
+		}
+	});
+
+	const didMountRef = useRef(false);
+	useEffect(() => {
+		if (didMountRef.current) {
+			console.log("this is updated");
+		} else {
+			didMountRef.current = true;
+		}
+	});
+
+	function handleAlertClick() {
+		setTimeout(() => {
+			alert("you click on " + like + " crt: " + likeRef.current);
+		}, 2000);
+	}
+
+	return (
+		<React.Fragment>
+			{/* 指定ref属性为domRef */}
+			<input type="text" ref={domRef} />
+			<button
+				style={style}
+				onClick={() => {
+					setLike(like + 1);
+					likeRef.current++;
+				}}
+			>
+				{like}赞👍
+			</button>
+			<button onClick={handleAlertClick}>Alert</button>
 		</React.Fragment>
 	);
 };
